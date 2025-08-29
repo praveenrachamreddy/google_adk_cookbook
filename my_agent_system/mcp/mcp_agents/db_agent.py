@@ -7,7 +7,9 @@ project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..
 sys.path.insert(0, project_root)
 
 from google.adk.agents import LlmAgent
-from google.adk.tools.mcp_tool.mcp_toolset import MCPToolset, StdioServerParameters
+from google.adk.tools.mcp_tool.mcp_toolset import MCPToolset
+# Use StdioConnectionParams instead of StdioServerParameters
+from google.adk.tools.mcp_tool.connection_params import StdioConnectionParams
 
 # Database MCP prompt
 DB_MCP_PROMPT = """
@@ -26,17 +28,17 @@ Key Principles:
 - Make sure you return information in an easy to read format.
 """
 
-# Path to MCP server script
+# Path to MCP server script - ensure it's absolute
 PATH_TO_YOUR_MCP_SERVER_SCRIPT = str((Path(__file__).parent / ".." / "db_server" / "server.py").resolve())
 
-# Create the database MCP agent
+# Create the database MCP agent with proper connection parameters
 db_mcp_agent = LlmAgent(
     model="gemini-2.0-flash",
     name="db_mcp_client_agent",
     instruction=DB_MCP_PROMPT,
     tools=[
         MCPToolset(
-            connection_params=StdioServerParameters(
+            connection_params=StdioConnectionParams(
                 command=sys.executable,  # Use the current Python interpreter
                 args=[PATH_TO_YOUR_MCP_SERVER_SCRIPT],
             )
