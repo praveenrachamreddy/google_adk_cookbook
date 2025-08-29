@@ -1,6 +1,7 @@
 import sys
 import os
 from pathlib import Path
+import shutil
 
 # Add project root to path
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
@@ -33,6 +34,17 @@ PATH_TO_YOUR_MCP_SERVER_SCRIPT = str((Path(__file__).parent / ".." / "db_server"
 if not os.path.exists(PATH_TO_YOUR_MCP_SERVER_SCRIPT):
     raise FileNotFoundError(f"MCP server script not found at: {PATH_TO_YOUR_MCP_SERVER_SCRIPT}")
 
+# Determine which Python command to use
+python_cmd = "python3"  # Default to python3
+if shutil.which("python3") is None:
+    if shutil.which("python") is not None:
+        python_cmd = "python"
+    else:
+        python_cmd = sys.executable  # Fallback to current Python interpreter
+
+print(f"DEBUG: Using Python command: {python_cmd}")
+print(f"DEBUG: Server script path: {PATH_TO_YOUR_MCP_SERVER_SCRIPT}")
+
 # Create the database MCP agent with proper connection parameters
 db_mcp_agent = LlmAgent(
     model="gemini-2.0-flash",
@@ -41,7 +53,7 @@ db_mcp_agent = LlmAgent(
     tools=[
         MCPToolset(
             connection_params=StdioServerParameters(
-                command="python",  # Use "python" command
+                command=python_cmd,  # Use the appropriate Python command
                 args=[PATH_TO_YOUR_MCP_SERVER_SCRIPT],
                 # Add environment variables to ensure the subprocess has the right context
                 env=dict(os.environ),
