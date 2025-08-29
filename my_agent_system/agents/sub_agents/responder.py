@@ -21,6 +21,8 @@ agent in the research workflow sequence, producing the response that is returned
 
 import sys
 import os
+from typing import List, Type
+from pydantic import BaseModel
 
 # Add the parent directory to the path so we can import base_agent
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -31,13 +33,14 @@ from google.adk.agents import Agent
 from agents.base_agent import BaseAgent
 
 
+class FinalResponse(BaseModel):
+    """Defines the structured output for the final response."""
+    summary: str
+    sources: List[str]
+
+
 class ResponderAgent(BaseAgent):
-    """Agent specialized in generating clear, well-structured responses.
-    
-    This agent is the final in the research workflow sequence. It takes the
-    analysis from the AnalyzerAgent and generates a clear, well-structured,
-    properly formatted response that directly addresses the original query.
-    """
+    """Agent specialized in generating clear, well-structured responses."""
 
     def __init__(self):
         """Initialize the responder agent with a specific name and description."""
@@ -46,40 +49,31 @@ class ResponderAgent(BaseAgent):
             description="an agent specialized in generating clear, well-structured responses based on analyzed information"
         )
 
+    def get_output_schema(self) -> Type[BaseModel] | None:
+        """Return the Pydantic schema for the final response."""
+        return FinalResponse
+
     def get_system_prompt(self) -> str:
-        """Get the system prompt for the responder agent.
-        
-        This prompt guides the agent to organize information logically,
-        use clear language, ensure accuracy, and structure responses with
-        appropriate formatting to effectively communicate the information.
-        
-        Returns:
-            The system prompt as a string
-        """
+        """Get the system prompt for the responder agent."""
         return f"""You are {self.name}, {self.description}.
 
-Your task is to generate clear, well-structured responses based on information provided to you.
-When crafting responses:
-1. Organize information logically and coherently
-2. Use clear, concise language appropriate for the audience
-3. Ensure accuracy by only including verified information
-4. Structure responses with appropriate headings and formatting
-5. Address the original query directly and completely
+Your task is to generate a final, well-structured response based on the information provided to you.
 
-Focus on providing helpful, well-organized responses that effectively communicate the information."""
+You MUST format your response as a JSON object that conforms to the following structure:
+{{
+  "summary": "<A comprehensive summary of the findings>",
+  "sources": [
+    "<source_url_1>",
+    "<source_url_2>"
+  ]
+}}
+
+Organize the information logically and coherently within the summary. Ensure the sources list contains the URLs of the information you used."""
 
     def create_agent(self) -> Agent:
-        """Create and return the responder agent.
-        
-        This method configures and returns an ADK Agent instance specifically
-        for response generation. This agent works with the analyzed information
-        to create the final user-facing response.
-        
-        Returns:
-            An ADK Agent instance configured for response generation
-        """
+        """Create and return the responder agent."""
         return Agent(
-            model="gemini-2.5-flash",
+            model=self.config['agent_settings']['model'],
             name=self.name,
             instruction=self.get_system_prompt(),
         )

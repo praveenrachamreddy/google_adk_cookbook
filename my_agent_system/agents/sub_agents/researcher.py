@@ -12,11 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Researcher Agent - Specialized for information gathering and web search.
+"""Researcher Agent - Manages research and information gathering.
 
-This module implements the ResearcherAgent, which is specialized in researching
-topics and gathering information from reliable sources using web search tools.
-It's the first agent in the research workflow sequence.
+This module implements the ResearcherAgent. It acts as a manager, using
+specialized sub-agents as tools for searching and saving notes.
 """
 
 import sys
@@ -26,63 +25,48 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from google.adk.agents import Agent
-from google.adk.tools import google_search
+from google.adk.tools import agent_tool
 
-# Import the base agent
+# Import the base agent and the specialist agents to be used as tools
 from agents.base_agent import BaseAgent
+from agents.sub_agents.search_agent import search_agent
+from agents.sub_agents.memory_agent import memory_agent
 
 
 class ResearcherAgent(BaseAgent):
-    """Agent specialized in researching topics and gathering information.
-    
-    This agent is the first in the research workflow sequence. It uses the
-    Google Search tool to find relevant information about research topics,
-    evaluates source credibility, and summarizes findings.
-    """
+    """Agent that manages the research process by delegating to specialist tools."""
 
     def __init__(self):
-        """Initialize the researcher agent with a specific name and description."""
+        """Initialize the researcher agent."""
         super().__init__(
             name="ResearcherAgent",
-            description="an agent specialized in researching topics and gathering information from reliable sources"
+            description="an agent that researches topics by using other agents for search and memory."
         )
 
     def get_system_prompt(self) -> str:
-        """Get the system prompt for the researcher agent.
-        
-        This prompt guides the agent to thoroughly research topics, use search
-        tools effectively, evaluate source credibility, and provide concise
-        summaries with proper citations.
-        
-        Returns:
-            The system prompt as a string
-        """
+        """Get the system prompt for the researcher agent."""
         return f"""You are {self.name}, {self.description}.
 
-Your task is to research topics thoroughly and gather accurate information.
-When given a research topic:
-1. Break down the topic into key questions that need to be answered
-2. Use the search tool to find relevant information
-3. Evaluate the credibility of sources
-4. Summarize findings clearly and concisely
-5. Cite your sources when possible
+Your task is to research topics thoroughly. You have two specialist agents available as tools:
+- **SearchAgent**: Use this agent to perform web searches and find information.
+- **MemoryAgent**: Use this agent to save important facts and findings to your session notes.
 
-Focus on providing factual, well-researched information that directly addresses the research topic."""
+When given a research topic:
+1. Break down the topic into key questions.
+2. Use the SearchAgent tool to find answers to those questions.
+3. Use the MemoryAgent tool to save key findings.
+4. Synthesize the gathered information into a cohesive report."""
 
     def create_agent(self) -> Agent:
-        """Create and return the researcher agent with Google Search tool.
-        
-        This method configures and returns an ADK Agent instance specifically
-        for research tasks, with the Google Search tool enabled.
-        
-        Returns:
-            An ADK Agent instance configured for research tasks
-        """
+        """Create and return the researcher agent with its specialist agent tools."""
         return Agent(
-            model="gemini-2.5-flash",
+            model=self.config['agent_settings']['model'],
             name=self.name,
             instruction=self.get_system_prompt(),
-            tools=[google_search],
+            tools=[
+                agent_tool.AgentTool(agent=search_agent.create_agent()),
+                agent_tool.AgentTool(agent=memory_agent.create_agent()),
+            ],
         )
 
 

@@ -79,7 +79,7 @@ Focus on providing clear, evidence-based analysis that helps users understand th
             An ADK Agent instance configured for analysis tasks
         """
         return Agent(
-            model="gemini-2.5-flash",
+                        model=self.config['agent_settings']['model'],
             name=self.name,
             instruction=self.get_system_prompt(),
         )

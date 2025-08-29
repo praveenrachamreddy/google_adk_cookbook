@@ -19,10 +19,17 @@ inherit from. It defines the common interface and structure that ensures
 consistency across all agents in the system.
 """
 
+import logging
+import os
+import yaml
 from abc import ABC, abstractmethod
-from typing import List, Optional, Any
+from typing import List, Optional, Any, Type
 from google.adk.agents import Agent
-# We'll import Tool when we need it, or use FunctionTool instead
+from google.adk.tools import FunctionTool
+from pydantic import BaseModel
+
+# Import session tools
+from tools.session_tools import save_note
 
 
 class BaseAgent(ABC):
@@ -32,6 +39,7 @@ class BaseAgent(ABC):
     It provides a consistent structure for creating specialized agents with
     their own unique capabilities while maintaining a uniform API.
     """
+    _config = None
 
     def __init__(self, name: str, description: str):
         """Initialize the base agent with a name and description.
@@ -42,6 +50,24 @@ class BaseAgent(ABC):
         """
         self.name = name
         self.description = description
+        self.logger = logging.getLogger(self.__class__.__name__)
+        self.config = self._load_config()
+        self.logger.info("Agent '%s' initialized with config: %s", self.name, self.config)
+
+    @classmethod
+    def _load_config(cls) -> dict:
+        """Load the system configuration from config.yaml."""
+        if cls._config is None:
+            try:
+                # Assuming config.yaml is in the root of the 'google_adk_cookbook' project
+                current_dir = os.path.dirname(os.path.abspath(__file__))
+                config_path = os.path.join(current_dir, '..', '..', 'config.yaml')
+                with open(config_path, 'r', encoding='utf-8') as f:
+                    cls._config = yaml.safe_load(f)
+            except FileNotFoundError:
+                # Fallback or error handling if config.yaml is not found
+                cls._config = {'agent_settings': {'model': 'gemini-1.5-flash'}}
+        return cls._config
 
     @abstractmethod
     def create_agent(self) -> Agent:
@@ -56,16 +82,26 @@ class BaseAgent(ABC):
         """
         pass
 
+    def get_input_schema(self) -> Type[BaseModel] | None:
+        """Define the Pydantic model for this agent's input. Optional."""
+        return None
+
+    def get_output_schema(self) -> Type[BaseModel] | None:
+        """Define the Pydantic model for this agent's output. Optional."""
+        return None
+
     def get_tools(self) -> List:
         """Get the tools available to this agent.
         
         This method can be overridden by subclasses to provide
-        agent-specific tools. By default, it returns an empty list.
+        agent-specific tools. By default, it returns the base tools.
         
         Returns:
-            A list of Tool instances (empty by default)
+            A list of base Tool instances.
         """
-        return []
+        self.logger.info("Getting base tools...")
+        base_tools = [FunctionTool(func=save_note)]
+        return base_tools
 
     def get_system_prompt(self) -> str:
         """Get the system prompt for this agent.
@@ -77,4 +113,5 @@ class BaseAgent(ABC):
         Returns:
             The system prompt as a string
         """
+        self.logger.info("Generating system prompt...")
         return f"You are {self.name}, {self.description}"

@@ -14,61 +14,59 @@
 
 """Main Agent Orchestrator - Entry point for the ADK web interface.
 
-This module serves as the entry point for the ADK web interface.
-It exports a root_agent that the ADK discovers and loads.
-
-To switch between agents for testing:
-1. Uncomment the agent you want to test
-2. Comment out the other agent
-3. Restart the ADK web interface
-
-Currently configured to test the ToolDemoAgent.
-To test the SequentialAgent (main research assistant), 
-uncomment the SequentialAgent lines and comment the ToolDemoAgent line.
+This module defines a root agent that acts as an orchestrator, using a hybrid
+model of delegation: using simple agents as tools, and transferring to complex
+sub-agents for sequential workflows.
 """
 
 import sys
 import os
+import yaml
 
 # Add the project root and subdirectories to the path
-# This ensures we can import modules from subdirectories
 project_root = os.path.abspath(os.path.dirname(__file__))
 sys.path.insert(0, project_root)
 sys.path.insert(0, os.path.join(project_root, 'agents'))
 sys.path.insert(0, os.path.join(project_root, 'agents', 'sub_agents'))
-sys.path.insert(0, os.path.join(project_root, 'mcp'))
 
-from google.adk.agents import SequentialAgent
+from google.adk.agents import Agent, SequentialAgent
+from google.adk.tools import agent_tool
+from google.adk.code_executors import BuiltInCodeExecutor
 
 # =============================================================================
-# IMPORT SUB-AGENTS
+# LOAD CONFIGURATION
 # =============================================================================
 
-# Import the research workflow agents
+with open(os.path.join(project_root, '..', 'config.yaml'), 'r', encoding='utf-8') as f:
+    config = yaml.safe_load(f)
+model_name = config['agent_settings']['model']
+
+
+# =============================================================================
+# 1. DEFINE SPECIALIZED AGENTS (THE "EXPERTS")
+# =============================================================================
+
+# Import the simple, single-purpose agents
+from agents.sub_agents.search_agent import search_agent
+
+# An agent that can only execute code.
+coding_agent = Agent(
+    name="CodingAgent",
+    model=model_name,
+    description="A coding specialist. Use this for math, logic, or coding tasks.",
+    code_executor=BuiltInCodeExecutor(),
+)
+
+# The sequential agent for complex research tasks.
 from agents.sub_agents.researcher import researcher_agent
 from agents.sub_agents.analyzer import analyzer_agent
 from agents.sub_agents.responder import responder_agent
 
-# Import the tool demonstration agent
-from agents.sub_agents.tool_demo import tool_demo_agent
-
-# Import the MCP agent
-from .mcp.mcp_agents.db_agent import db_mcp_agent
-
-# =============================================================================
-# CREATE AGENT INSTANCES
-# =============================================================================
-
-# Create the main sequential agent that orchestrates the research workflow
-# This agent processes requests through three stages:
-# 1. ResearcherAgent - Gathers information using web search
-# 2. AnalyzerAgent - Analyzes and structures the information
-# 3. ResponderAgent - Generates a well-formatted response
 main_research_agent = SequentialAgent(
     name="ModularResearchAssistant",
     description=(
         "A modular agentic system that researches topics, analyzes information, "
-        "and generates well-structured responses."
+        "and generates well-structured responses. Use this for complex, multi-step research tasks."
     ),
     sub_agents=[
         researcher_agent.create_agent(),
@@ -77,27 +75,29 @@ main_research_agent = SequentialAgent(
     ],
 )
 
-# Create the tool demonstration agent for testing custom tools
-# This agent demonstrates:
-# 1. data_formatter tool - Formats data in JSON, XML, CSV
-# 2. sentiment_analyzer tool - Analyzes text sentiment
-tool_demo_test_agent = tool_demo_agent.create_agent()
-
-# Create the database MCP agent for testing database interactions
-db_mcp_test_agent = db_mcp_agent
-
 # =============================================================================
-# EXPORT ROOT AGENT FOR ADK WEB INTERFACE
+# 2. DEFINE THE ORCHESTRATOR (ROOT AGENT)
 # =============================================================================
 
-# IMPORTANT: Only one agent can be exported as root_agent for the ADK web interface
-# Uncomment the agent you want to test and comment the other
+# This root agent uses the hybrid model of orchestration.
+root_agent = Agent(
+    name="OrchestratorAgent",
+    model=model_name,
+    instruction="""You are a master orchestrator. Your job is to delegate tasks.
 
-# For testing the main research workflow:
+You have two ways of delegating:
+1. Use a Tool: For simple, single-purpose tasks like searching or coding, call the appropriate tool (SearchAgent, CodingAgent).
+2. Transfer to a Sub-Agent: For complex, multi-step tasks like research, transfer control to the appropriate sub-agent (ModularResearchAssistant).""",
+    tools=[
+        agent_tool.AgentTool(agent=search_agent.create_agent()),
+        agent_tool.AgentTool(agent=coding_agent),
+    ],
+    sub_agents=[
+        main_research_agent,
+    ]
+)
+
+# To test a specific agent directly, you can uncomment one of the following lines:
+# root_agent = search_agent.create_agent()
+# root_agent = coding_agent
 # root_agent = main_research_agent
-
-# For testing custom tools (default):
-# root_agent = tool_demo_test_agent
-
-# For testing the database MCP agent:
-root_agent = db_mcp_test_agent
