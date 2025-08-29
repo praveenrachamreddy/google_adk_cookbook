@@ -26,8 +26,12 @@ Key Principles:
 - Make sure you return information in an easy to read format.
 """
 
-# Path to MCP server script - ensure it's absolute
+# Path to MCP server script - ensure it's absolute and exists
 PATH_TO_YOUR_MCP_SERVER_SCRIPT = str((Path(__file__).parent / ".." / "db_server" / "server.py").resolve())
+
+# Verify the server script exists
+if not os.path.exists(PATH_TO_YOUR_MCP_SERVER_SCRIPT):
+    raise FileNotFoundError(f"MCP server script not found at: {PATH_TO_YOUR_MCP_SERVER_SCRIPT}")
 
 # Create the database MCP agent with proper connection parameters
 db_mcp_agent = LlmAgent(
@@ -37,8 +41,10 @@ db_mcp_agent = LlmAgent(
     tools=[
         MCPToolset(
             connection_params=StdioServerParameters(
-                command="python",  # Use "python" command for your system
+                command="python",  # Use "python" command
                 args=[PATH_TO_YOUR_MCP_SERVER_SCRIPT],
+                # Add environment variables to ensure the subprocess has the right context
+                env=dict(os.environ),
             )
         )
     ],
