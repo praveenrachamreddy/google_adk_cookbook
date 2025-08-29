@@ -254,6 +254,105 @@ python verify_system.py     # Comprehensive system check
 4. Rate limiting for API calls
 5. Monitoring and metrics collection
 
+
+
+
+
+
+Updated `TECHNICAL_ARCHITECTURE.md` Content Summary
+
+  1. System Overview (Update)
+   * This document details the technical architecture of the modular agentic system, now featuring a hybrid
+     orchestration model that leverages Google ADK's capabilities for both direct tool execution and seamless agent
+     transfer.
+
+  2. Core Components (Update)
+
+   * Base Agent Framework
+       * File: my_agent_system/agents/base_agent.py
+       * Enhancements:
+           * Centralized Logging: Provides self.logger for consistent, agent-specific logging throughout the
+             lifecycle.
+           * Configuration Loading: Implements _load_config() to read settings from config.yaml, making self.config
+             available to all subclasses.
+           * Optional Input/Output Schemas: Defines get_input_schema() and get_output_schema() methods (returning
+             None by default) for Pydantic-based data validation, allowing agents to opt-in for structured data
+             contracts.
+           * Default Tools: Provides a base set of tools, including the save_note tool (via MemoryAgent), which can
+             be inherited and extended by subclasses.
+
+   * Orchestrator Agent (`root_agent`)
+       * File: my_agent_system/agent.py
+       * Purpose: Acts as the primary entry point and intelligent router.
+       * Architecture: Employs a hybrid delegation model:
+           * Uses SearchAgent and CodingAgent as direct AgentTools for simple, single-step tasks.
+           * Leverages ADK's built-in sub_agents mechanism to transfer control to ModularResearchAssistant for
+             complex, multi-stage workflows.
+
+   * Specialized Agents (Update/Add)
+       * ResearcherAgent
+           * File: my_agent_system/agents/sub_agents/researcher.py
+           * Purpose: Manages the research process.
+           * Architecture: Now acts as a manager, using SearchAgent (for web search) and MemoryAgent (for saving
+             notes) as its internal AgentTools. This respects the "one built-in tool" limitation.
+       * SearchAgent
+           * File: my_agent_system/agents/sub_agents/search_agent.py
+           * Purpose: Dedicated to performing Google Search.
+           * Architecture: Simple agent with only the google_search built-in tool.
+       * MemoryAgent
+           * File: my_agent_system/agents/sub_agents/memory_agent.py
+           * Purpose: Dedicated to saving notes to the session state.
+           * Architecture: Simple agent with only the save_note custom tool.
+       * (Update AnalyzerAgent, ResponderAgent, ToolDemoAgent to reflect model changes and schema usage for
+         ResponderAgent)
+
+  3. System Architecture (Update)
+
+   * Directory Structure:
+       * Add config.yaml at the project root.
+       * Under my_agent_system/agents/sub_agents/:
+           * Add memory_agent.py
+           * Add search_agent.py
+       * Under my_agent_system/tools/:
+           * Add session_tools.py (containing save_note tool)
+
+  4. Key Technical Patterns (Update/Add)
+
+   * Hybrid Orchestration Model:
+       * Illustrates how the OrchestratorAgent (root_agent) combines AgentTool usage (for SearchAgent, CodingAgent)
+         with the sub_agents parameter (for ModularResearchAssistant) to achieve flexible delegation.
+       * Emphasize that ADK automatically injects transfer_to_agent capabilities when sub_agents are defined.
+   * Base Agent Class Enhancements:
+       * Detail the implementation of self.logger, self.config, get_input_schema(), get_output_schema(), and the
+         extended get_tools() method.
+   * Optional Schema Validation: Explain the opt-in mechanism for Pydantic schemas.
+   * Session State Management: Describe the save_note tool and how tool_context.state is used for in-session memory.
+
+
+  5. Event Flow and Tracing (Update)
+   * Update the flow to reflect the OrchestratorAgent's role in delegating to tools or transferring to sub-agents.
+   * Mention that BaseAgent's logging provides more granular traces of agent initialization and tool usage.
+
+  6. Configuration Management (Update)
+   * File: config.yaml (new)
+   * Purpose: Centralizes model selection (gemini-2.0-flash) and other agent-specific settings.
+   * Mechanism: Loaded by BaseAgent and accessible via self.config.
+
+  7. Model Selection (Update)
+   * All agents now dynamically load their model from config.yaml.
+
+  8. Future Enhancements (Update)
+   * Update to reflect that some previously planned items (like error handling) are still future work, while others
+     (like config, schemas, session state) are now implemented.
+
+
+
+
+
+
+
+
+
 ## License Information
 
 Copyright 2025 Praveen Rachamreddy

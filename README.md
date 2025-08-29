@@ -308,6 +308,77 @@ The system is ready for immediate use and extension:
 3. Implement custom tools for unique workflows
 4. Deploy agents to Vertex AI Agent Engine using scripts in `deployment/`
 
+
+
+Updated `README.md` Content Summary
+
+  1. Project Overview (Update)
+   * Emphasize the evolution into a robust, modular, and extensible agentic system.
+
+  2. Key Features (Update/Add)
+   * Hybrid Orchestration: Central OrchestratorAgent delegates tasks using both "Agent as a Tool" pattern (for
+     simple tasks) and ADK's built-in transfer mechanism (for complex workflows).
+   * Centralized Configuration: Agent models and other settings are managed via a config.yaml file.
+   * Enhanced BaseAgent: All agents inherit from BaseAgent, providing:
+       * Centralized Logging: Standardized logging for agent lifecycle events.
+       * Optional Input/Output Schemas: Agents can define Pydantic schemas for structured data (e.g.,
+         ResponderAgent's output).
+       * Session State Management: Agents can save notes to the current session memory using the MemoryAgent and
+         its save_note tool.
+   * Modular Agent Design: SearchAgent and MemoryAgent are now standalone, reusable components.
+   * Refactored ResearcherAgent: Acts as a manager, using SearchAgent and MemoryAgent as its tools.
+   * Model Consistency: All agents use the model specified in config.yaml (e.g., gemini-2.0-flash).
+   * (Keep existing features like Custom Tools, MCP Integration, Extensibility, Testing, Documentation)
+
+  3. Project Structure (Update)
+   * Add config.yaml at the root level.
+   * Under my_agent_system/agents/sub_agents/:
+       * Add memory_agent.py
+       * Add search_agent.py
+   * Under my_agent_system/tools/:
+       * Add session_tools.py
+
+  4. Agent Descriptions (Update)
+   * OrchestratorAgent (formerly `my_agent_system`'s root agent):
+       * Description: "A master orchestrator that intelligently delegates tasks. It uses SearchAgent and
+         CodingAgent as direct tools for simple queries, and transfers control to ModularResearchAssistant for
+         complex research workflows."
+   * ModularResearchAssistant (SequentialAgent):
+       * Description: "A multi-stage research workflow. Its ResearcherAgent now uses dedicated SearchAgent and
+         MemoryAgent tools."
+   * (Keep descriptions for ToolDemoAgent and Database MCP Agent)
+
+  5. Architecture Details (Update/Add New Section)
+   * Hybrid Orchestration Model:
+       * Explain how OrchestratorAgent uses AgentTool for SearchAgent/CodingAgent (simple tasks) and the ADK's
+         sub_agents parameter for ModularResearchAssistant (complex transfers).
+       * Mention the transfer_to_agent mechanism is automatically provided by ADK when sub_agents are defined.
+   * Base Agent Class Enhancements:
+       * Detail the role of BaseAgent in providing common functionalities:
+           * Centralized Logging: self.logger for consistent logging.
+           * Configuration Loading: self.config for accessing config.yaml settings.
+           * Optional Schemas: get_input_schema() and get_output_schema() for Pydantic validation (opt-in).
+           * Default Tools: Provides save_note tool via MemoryAgent.
+   * Refactored ResearcherAgent:
+       * Explain that ResearcherAgent now acts as a manager.
+       * It uses SearchAgent (for web search) and MemoryAgent (for saving notes) as its internal tools, respecting
+         the "one built-in tool" limitation.
+   * Session State Management:
+       * Explain the save_note tool in MemoryAgent and how it saves data to the current session state.
+       * Mention that session state is automatically shared between agents in the same conversation.
+
+  6. Using the System (Update)
+   * Update the agent names in the adk web section to reflect the new OrchestratorAgent as the primary entry point.
+   * Provide example prompts that demonstrate the orchestrator's delegation:
+       * "What is the capital of Japan?" (triggers SearchAgent)
+       * "What is 2 to the power of 16?" (triggers CodingAgent)
+       * "Write a report on the impact of renewable energy on the global economy." (triggers
+         ModularResearchAssistant)
+
+
+
+
+
 ## License
 
 Copyright 2025 Praveen Rachamreddy
