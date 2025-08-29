@@ -7,9 +7,7 @@ project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..
 sys.path.insert(0, project_root)
 
 from google.adk.agents import LlmAgent
-from google.adk.tools.mcp_tool.mcp_toolset import MCPToolset
-# Use StdioConnectionParams instead of StdioServerParameters
-from google.adk.tools.mcp_tool.connection_params import StdioConnectionParams
+from google.adk.tools.mcp_tool.mcp_toolset import MCPToolset, StdioServerParameters
 
 # Database MCP prompt
 DB_MCP_PROMPT = """
@@ -38,7 +36,7 @@ db_mcp_agent = LlmAgent(
     instruction=DB_MCP_PROMPT,
     tools=[
         MCPToolset(
-            connection_params=StdioConnectionParams(
+            connection_params=StdioServerParameters(
                 command=sys.executable,  # Use the current Python interpreter
                 args=[PATH_TO_YOUR_MCP_SERVER_SCRIPT],
             )
