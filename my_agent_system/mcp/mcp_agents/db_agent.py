@@ -37,7 +37,7 @@ db_mcp_agent = LlmAgent(
     tools=[
         MCPToolset(
             connection_params=StdioServerParameters(
-                command=sys.executable,  # Use the current Python interpreter
+                command="python",  # Use "python" command for your system
                 args=[PATH_TO_YOUR_MCP_SERVER_SCRIPT],
             )
         )
